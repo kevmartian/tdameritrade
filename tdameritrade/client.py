@@ -2,6 +2,7 @@ import os
 import requests
 import pandas as pd
 from .urls import ACCOUNTS, INSTRUMENTS, QUOTES, SEARCH, HISTORY, OPTIONCHAIN, MOVERS
+import time
 
 
 class TDClient(object):
@@ -80,10 +81,28 @@ class TDClient(object):
         x = self.quote(symbol)
         return pd.DataFrame(x).T.reset_index(drop=True)
 
-    def history(self, symbol, **kwargs):
-        return requests.get(HISTORY % symbol,
-                            headers=self._headers(),
-                            params=kwargs).json()
+    #def history(self, symbol):
+    #    return requests.get(HISTORY % symbol,
+    #                        headers=self._headers()).json()
+
+    def history(self, symbol, periodType='day', period='10', frequencyType='minute', frequency='1',
+                endDate=str(int(round(time.time() * 1000))), extended='false'):
+        startDate = endDate
+        if periodType == 'day':
+            startDate = str(int(endDate) - 86400000 * int(period))
+        elif periodType == 'month':
+            startDate = str(int(endDate) - 86400000 * 30 * int(period))
+        elif periodType == 'year':
+            startDate = str(int(endDate) - 86400000 * 365 * int(period))
+        return requests.get('https://api.tdameritrade.com/v1/marketdata/' + symbol +
+                            '/pricehistory?periodType=' + periodType +
+                            #'&period=' + period +
+                            '&startDate=' + startDate +
+                            '&endDate=' + endDate +
+                            '&frequencyType=' + frequencyType +
+                            '&frequency=' + frequency +
+                            '&needExtendedHoursData=' + extended,
+                            headers=self._headers()).json()
 
     def historyDF(self, symbol):
         x = self.history(symbol)
